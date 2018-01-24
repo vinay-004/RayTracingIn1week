@@ -1,3 +1,5 @@
+#pragma once
+
 #include"HitableList.h"
 
 class Camera

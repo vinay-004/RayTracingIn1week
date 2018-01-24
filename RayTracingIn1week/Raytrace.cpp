@@ -1,47 +1,36 @@
+#pragma once
+
 #include<iostream>
 #include<fstream>
 #include<float.h>
 #include"Camera.h"
+#include"Hitable.h"
+#include"material.h"
 
-Vec3 random_in_unit_sphere()
-{
 
-	Vec3 p;
-
-	do
-	{
-		float x = (rand() / (RAND_MAX + 1.0));
-		float y = (rand() / (RAND_MAX + 1.0));
-		float z = (rand() / (RAND_MAX + 1.0));
-		p = 2.0 * Vec3(x, y, z) - Vec3(1.0, 1.0, 1.0);
-	} while (dot(p,p) >= 1.0);						// point  on sphere is at a distance of radius from center of sphere
-
-	return p;
-}
-
-Vec3 Color(const Ray &r, Hitable *world)
-{
+Vec3 Color(const Ray& r, Hitable *world, int depth) {
 	hit_record rec;
-	if (world->hit(r, 0.001, FLT_MAX, rec))
-	{
-		Vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-
-		return 0.5 * Color(Ray(rec.p, target - rec.p), world);
-	}  
+	if (world->hit(r, 0.001, FLT_MAX, rec)) {
+		Ray scattered;
+		Vec3 attenuation;
+		if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+			return attenuation*Color(scattered, world, depth + 1);
+		}
+		else {
+			return Vec3(0, 0, 0);
+		}
+	}
 	else {
-
-		Vec3 unit_dir = unit_vector(r.direction());
-		float t = 0.5 * (unit_dir.y() + 1.0);
-		Vec3 col = (1.0 - t)* Vec3(1.0, 1.0, 1.0) + t*Vec3(0.5, 0.7, 1.0);
-		return col;
-
+		Vec3 unit_direction = unit_vector(r.direction());
+		float t = 0.5*(unit_direction.y() + 1.0);
+		return (1.0 - t)*Vec3(1.0, 1.0, 1.0) + t*Vec3(0.5, 0.7, 1.0);
 	}
 }
 
 int main()
 {
-	int nx = 200;
-	int ny = 100;
+	int nx = 400;
+	int ny = 200;
 	int ns = 100;
 	Camera cam;
 	std::ofstream myfile("basic.ppm");
@@ -52,10 +41,12 @@ int main()
 			
 		
 
-		Hitable *list[2];
-		list[0] = new Sphere(Vec3(0.0, 0.0, -1.0), 0.5 );
-		list[1] = new Sphere(Vec3(0.0, -100.5, -1.0), 100.0);
-		Hitable *world = new HitableList(list, 2);
+		Hitable *list[4];
+		list[0] = new Sphere(Vec3(0, 0, -1), 0.5, new lambertian(Vec3(0.1, 0.2, 0.5)));
+		list[1] = new Sphere(Vec3(0, -100.5, -1), 100, new lambertian(Vec3(0.8, 0.8, 0.0)));
+		list[2] = new Sphere(Vec3(1, 0, -1), 0.5, new metal(Vec3(0.8, 0.6, 0.2), 0.0));
+		list[3] = new Sphere(Vec3(-1, 0, -1), 0.5, new metal(Vec3(0.8, 0.8, 0.8), 0.0));
+		Hitable *world = new HitableList(list, 4);
 
 		for (int  j = ny-1; j >= 0; j--)
 		{
@@ -70,7 +61,7 @@ int main()
 					float v = float(j + (rand() / (RAND_MAX + 1.0))) / float(ny);
 
 					Ray ray = cam.get_ray(u, v);
-					color += Color(ray, world);
+					color += Color(ray, world,0);
 				}
 				color /= float(ns);
 				int ir = int(255.99 * sqrt(color.r()));

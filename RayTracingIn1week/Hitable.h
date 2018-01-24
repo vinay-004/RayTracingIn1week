@@ -1,15 +1,16 @@
-#include<math.h>
 #pragma once
+
+#include<math.h>
 #include"Ray.h"
 
-// class Material;
+ class material;
 
 struct hit_record
 {
 		float t;
 		Vec3 p;
 		Vec3 normal;
-	//	Material *mat_rc;
+		material *mat_ptr;
 };
 
 class Hitable
